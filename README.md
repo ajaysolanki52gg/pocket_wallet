@@ -1,6 +1,6 @@
-# PocketLedger
+# Pocket Wallet
 
-PocketLedger is a simple and modern Android expense tracking application that helps users manage their finances easily.  
+Pocket Wallet is a simple and modern Android expense tracking application that helps users manage their finances easily.  
 It allows users to create accounts, track income and expenses, and view spending summaries in a clean and intuitive interface.
 
 ---
