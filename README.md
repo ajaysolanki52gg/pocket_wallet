@@ -30,10 +30,11 @@ It allows users to create accounts, track income and expenses, and view spending
 
 ## Screenshots
 
+<!--suppress HtmlDeprecatedAttribute -->
 <p align="center">
-  <img src="screenshots/PW_home.png" width="250"/>
-  <img src="screenshots/PW_transaction.png" width="250"/>
-  <img src="screenshots/PW_Spending.png" width="250"/>
+  <img src="screenshots/PW_home.png" width="312" alt=""/>
+  <img src="screenshots/PW_transaction.png" width="384" alt=""/>
+  <img src="screenshots/PW_Spending.png" width="382" alt=""/>
 </p>
 
 ---
@@ -43,11 +44,17 @@ It allows users to create accounts, track income and expenses, and view spending
 
 1. Clone the repository
    git clone https://github.com/ajaysolanki52gg/pocket_wallet.git
-
-
 2. Open the project in Android Studio
-
 3. Sync Gradle and run the app on an emulator or device
+
+---
+
+## Usage
+
+
+1. Open the project in Android Studio
+
+2. Sync Gradle and run the app on an emulator or device
 ---
 ## APK
 
