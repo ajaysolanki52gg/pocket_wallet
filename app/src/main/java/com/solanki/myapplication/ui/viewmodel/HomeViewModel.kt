@@ -72,12 +72,17 @@ class HomeViewModel @Inject constructor(
             )
         }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
 
-    val spendingByCategory: StateFlow<List<CategorySum>> = combine(_selectedAccountIds, _timeFilter, _customDateRange) { ids, filter, range ->
+    private val rawSpendingByCategory: StateFlow<List<CategorySum>> = combine(_selectedAccountIds, _timeFilter, _customDateRange) { ids, filter, range ->
         Triple(ids, filter, range)
     }.flatMapLatest { (ids, filter, range) ->
         val since = if (filter == TimeFilter.CUSTOM) range?.first ?: 0L else filter.getStartTime()
         val until = if (filter == TimeFilter.CUSTOM) range?.second ?: Long.MAX_VALUE else Long.MAX_VALUE
         repository.getSpendingAnalysisFlow(ids.toList(), since, until)
+    }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
+
+    // Grouping for Home Page (Main Categories Only)
+    val spendingByCategory: StateFlow<List<CategorySum>> = rawSpendingByCategory.map { list ->
+        DataUtils.groupSubcategoriesToMain(list)
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
 
     init {

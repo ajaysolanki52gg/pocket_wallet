@@ -25,7 +25,7 @@ object AppModule {
             "pocket_ledger_db"
         )
         .setJournalMode(androidx.room.RoomDatabase.JournalMode.TRUNCATE) // Disables WAL and uses a simple journal file for maximum backup compatibility
-        .addMigrations(PocketLedgerDatabase.MIGRATION_1_2)
+        .addMigrations(PocketLedgerDatabase.MIGRATION_1_2, PocketLedgerDatabase.MIGRATION_2_3)
         .build()
     }
 

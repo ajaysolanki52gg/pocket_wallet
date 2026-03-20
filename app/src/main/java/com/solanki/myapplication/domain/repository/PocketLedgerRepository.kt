@@ -3,6 +3,7 @@ package com.solanki.myapplication.domain.repository
 import com.solanki.myapplication.data.model.Account
 import com.solanki.myapplication.data.model.CategorySum
 import com.solanki.myapplication.data.model.Transaction
+import com.solanki.myapplication.data.model.Template
 import com.solanki.myapplication.domain.model.AccountWithBalance
 import kotlinx.coroutines.flow.Flow
 
@@ -47,4 +48,12 @@ interface PocketLedgerRepository {
 
     suspend fun checkpointDatabase()
     suspend fun closeDatabase()
+
+    fun getAllTransactionNotes(): Flow<List<String>>
+
+    // Template operations
+    fun getAllTemplates(): Flow<List<Template>>
+    suspend fun insertTemplate(template: Template)
+    suspend fun updateTemplate(template: Template)
+    suspend fun deleteTemplate(template: Template)
 }

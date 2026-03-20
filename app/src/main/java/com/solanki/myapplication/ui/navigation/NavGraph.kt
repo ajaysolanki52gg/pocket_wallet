@@ -9,6 +9,7 @@ import androidx.navigation.navArgument
 import com.solanki.myapplication.ui.screen.AnalyticsScreen
 import com.solanki.myapplication.ui.screen.AddEditAccountScreen
 import com.solanki.myapplication.ui.screen.AddEditTransactionScreen
+import com.solanki.myapplication.ui.screen.AddEditTemplateScreen
 import com.solanki.myapplication.ui.screen.HomeScreen
 import com.solanki.myapplication.ui.screen.AccountListScreen
 
@@ -96,6 +97,24 @@ fun NavGraph(navController: NavHostController) {
             AddEditTransactionScreen(
                 accountId = accountId,
                 transactionId = transactionId,
+                onNavigateBack = { navController.popBackStack() },
+                onNavigateToAddTemplate = {
+                    navController.navigate(Screen.AddEditTemplate.createRoute())
+                }
+            )
+        }
+        composable(
+            route = Screen.AddEditTemplate.route,
+            arguments = listOf(
+                navArgument("templateId") {
+                    type = NavType.LongType
+                    defaultValue = -1L
+                }
+            )
+        ) { backStackEntry ->
+            val templateId = backStackEntry.arguments?.getLong("templateId") ?: -1L
+            AddEditTemplateScreen(
+                templateId = templateId,
                 onNavigateBack = { navController.popBackStack() }
             )
         }

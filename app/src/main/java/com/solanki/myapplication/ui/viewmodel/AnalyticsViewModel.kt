@@ -79,7 +79,7 @@ class AnalyticsViewModel @Inject constructor(
         repository.getBalanceTrendFlow(ids.toList(), since, until)
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
 
-    val spendingByCategory: StateFlow<List<CategorySum>> = combine(_selectedAccountIds, _timeFilter, _customDateRange) { ids, filter, range ->
+    val rawSpendingByCategory: StateFlow<List<CategorySum>> = combine(_selectedAccountIds, _timeFilter, _customDateRange) { ids, filter, range ->
         Triple(ids, filter, range)
     }.flatMapLatest { (ids, filter, range) ->
         val since = if (filter == TimeFilter.CUSTOM) range?.first ?: 0L else filter.getStartTime()
@@ -87,51 +87,30 @@ class AnalyticsViewModel @Inject constructor(
         repository.getSpendingAnalysisFlow(ids.toList(), since, until)
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
 
-    val baseCategoryTransactions: StateFlow<List<Transaction>> =
-        combine(
-            _selectedCategory,
-            filterParams
-        ) { category, params ->
+    // HOME PAGE LOGIC: Always grouped by Main Category
+    val spendingByCategory: StateFlow<List<CategorySum>> = rawSpendingByCategory.map { list ->
+        DataUtils.groupSubcategoriesToMain(list)
+    }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
 
-            val (since, until, accountIds) = params
+    // Get all expense transactions within the current filter/accounts
+    private val allExpenseTransactions: StateFlow<List<Transaction>> = filterParams.flatMapLatest { (since, until, accountIds) ->
+        if (accountIds.isEmpty()) {
+            repository.getTransactionsForAnalysis(since, until)
+        } else {
+            repository.getTransactionsForAnalysisForAccounts(accountIds, since, until)
+        }
+    }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
 
-            if (accountIds.isEmpty()) {
-                repository.getTransactionsForAnalysis(since, until)
-            } else {
-                repository.getTransactionsForAnalysisForAccounts(accountIds, since, until)
-            }.map { list ->
-                if (category == null) {
-                    list
-                } else {
-                    list.filter {
-                        val main = DataUtils.findMainCategory(it.category)
-                        main == category
-                    }
-                }
-            }
-
-        }.flatMapLatest { it }
-            .stateIn(
-                viewModelScope,
-                SharingStarted.WhileSubscribed(5000),
-                emptyList()
-            )
-    val subcategorySpending: StateFlow<List<CategorySum>> =
-        baseCategoryTransactions
-            .map { list ->
-                list.groupBy { it.category }
-                    .map { (sub, transactions) ->
-                        CategorySum(
-                            category = sub,
-                            total = transactions.sumOf { it.amount }
-                        )
-                    }
-            }
-            .stateIn(
-                viewModelScope,
-                SharingStarted.WhileSubscribed(5000),
-                emptyList()
-            )
+    // BREAKDOWN PAGE LOGIC: Subcategories for the selected main category
+    val subcategorySpending: StateFlow<List<CategorySum>> = combine(allExpenseTransactions, _selectedCategory) { transactions, mainCategory ->
+        if (mainCategory == null) emptyList()
+        else {
+            transactions.filter { DataUtils.findMainCategory(it.category) == mainCategory }
+                .groupBy { it.category }
+                .map { (sub, list) -> CategorySum(sub, list.sumOf { it.amount }) }
+                .sortedByDescending { it.total }
+        }
+    }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
 
     private val allTransactionsFlow: Flow<List<Transaction>> = filterParams.flatMapLatest { (since, until, accountIds) ->
         if (accountIds.isEmpty()) {
@@ -156,32 +135,26 @@ class AnalyticsViewModel @Inject constructor(
         groupTransactions(filtered, filter)
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
 
+    // Unified transaction list for the Spending tab (filtered by chart selection)
     val spendingTransactions: StateFlow<List<Transaction>> = combine(
+        allExpenseTransactions,
         _selectedCategory, 
         _selectedSubcategory,
-        filterParams
-    ) { category, subcategory, params ->
-        val (since, until, accountIds) = params
-        val flow = if (accountIds.isEmpty()) {
-            repository.getTransactionsForAnalysis(since, until)
+        _isBreakdownMode
+    ) { transactions, category, subcategory, isBreakdown ->
+        if (category == null) {
+            transactions.sortedByDescending { it.amount }
         } else {
-            repository.getTransactionsForAnalysisForAccounts(accountIds, since, until)
+            transactions.filter { trans ->
+                val main = DataUtils.findMainCategory(trans.category)
+                if (isBreakdown && subcategory != null) {
+                    main == category && trans.category.equals(subcategory, ignoreCase = true)
+                } else {
+                    main == category
+                }
+            }.sortedByDescending { it.amount }
         }
-        flow.map { list ->
-            if (category == null) {
-                list
-            } else {
-                list.filter { 
-                    val main = DataUtils.findMainCategory(it.category)
-                    if (subcategory != null) {
-                        main == category && it.category.equals(subcategory, ignoreCase = true)
-                    } else {
-                        main == category
-                    }
-                }.sortedByDescending { it.amount }
-            }
-        }
-    }.flatMapLatest { it }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
+    }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
 
     private fun groupTransactions(transactions: List<Transaction>, filter: TimeFilter): List<TransactionGroup> {
         if (transactions.isEmpty()) return emptyList()

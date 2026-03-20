@@ -9,6 +9,7 @@ import androidx.room.Update
 import com.solanki.myapplication.data.model.Account
 import com.solanki.myapplication.data.model.CategorySum
 import com.solanki.myapplication.data.model.Transaction
+import com.solanki.myapplication.data.model.Template
 import kotlinx.coroutines.flow.Flow
 
 @Dao
@@ -64,7 +65,7 @@ interface PocketLedgerDao {
     @Query("SELECT SUM(amount) FROM transactions WHERE accountId = :accountId AND type = 'EXPENSE' AND isArchived = 0")
     fun getTotalExpenseForAccount(accountId: Long): Flow<Double?>
 
-    // Analytics Queries - Improved date filtering logic to avoid "no data" when since/until are 0
+    // Analytics Queries
     @Query("SELECT category, SUM(amount) as total FROM transactions WHERE type = 'EXPENSE' AND isArchived = 0 AND (:since = 0 OR date >= :since) AND (:until = 0 OR :until = 9223372036854775807 OR date <= :until) GROUP BY category")
     fun getSpendingByCategory(since: Long = 0L, until: Long = Long.MAX_VALUE): Flow<List<CategorySum>>
 
@@ -88,4 +89,20 @@ interface PocketLedgerDao {
 
     @Query("SELECT * FROM transactions WHERE accountId IN (:accountIds) AND category LIKE :category || '%' AND type = 'EXPENSE' AND isArchived = 0 AND (:since = 0 OR date >= :since) AND (:until = 0 OR :until = 9223372036854775807 OR date <= :until) ORDER BY amount DESC")
     fun getTopTransactionsByCategoryForAccounts(accountIds: List<Long>, category: String, since: Long = 0L, until: Long = Long.MAX_VALUE): Flow<List<Transaction>>
+
+    @Query("SELECT notes FROM transactions WHERE notes IS NOT NULL AND notes != '' GROUP BY notes ORDER BY COUNT(*) DESC")
+    fun getAllTransactionNotes(): Flow<List<String>>
+
+    // Template operations
+    @Query("SELECT * FROM templates ORDER BY createdAt DESC")
+    fun getAllTemplates(): Flow<List<Template>>
+
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    suspend fun insertTemplate(template: Template)
+
+    @Update
+    suspend fun updateTemplate(template: Template)
+
+    @Delete
+    suspend fun deleteTemplate(template: Template)
 }

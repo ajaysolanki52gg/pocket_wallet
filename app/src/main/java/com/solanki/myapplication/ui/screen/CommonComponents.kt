@@ -149,7 +149,7 @@ data class CategoryInfo(
     val subcategories: List<SubcategoryInfo> = emptyList()
 )
 
-val CATEGORY_DATA = listOf(
+val  CATEGORY_DATA = listOf(
     CategoryInfo("Food", Icons.Default.Restaurant, Color(0xFFFF5722), listOf(
         SubcategoryInfo("Bar, cafe", Icons.Default.LocalCafe),
         SubcategoryInfo("Restaurant", Icons.Default.Restaurant),
@@ -592,12 +592,21 @@ fun TransactionItem(
         
         Column(modifier = Modifier.weight(1f)) {
             Text(
-                text = transaction.title.ifEmpty { transaction.category },
+                text = transaction.category,
                 style = MaterialTheme.typography.bodyLarge,
                 fontWeight = FontWeight.Bold,
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis
             )
+            if (transaction.notes.isNotBlank()) {
+                Text(
+                    text = transaction.notes,
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis
+                )
+            }
             Text(
                 text = SimpleDateFormat("dd MMM, hh:mm a", Locale.getDefault()).format(Date(transaction.date)),
                 style = MaterialTheme.typography.labelSmall,

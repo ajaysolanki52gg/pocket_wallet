@@ -13,4 +13,7 @@ sealed class Screen(val route: String) {
             "add_edit_transaction/$accountId?transactionId=$transactionId"
     }
     object AccountList : Screen("account_list")
+    object AddEditTemplate : Screen("add_edit_template?templateId={templateId}") {
+        fun createRoute(templateId: Long = -1L) = "add_edit_template?templateId=$templateId"
+    }
 }

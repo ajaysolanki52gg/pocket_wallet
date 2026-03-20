@@ -3,6 +3,7 @@ package com.solanki.myapplication.ui.screen
 import android.content.Context
 import android.content.Intent
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
@@ -22,6 +23,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.core.content.FileProvider
@@ -42,7 +44,7 @@ import java.util.*
 fun AccountDetailScreen(
     accountId: Long,
     onNavigateBack: () -> Unit,
-    onNavigateToAddTransaction: (Long) -> Unit,
+    onNavigateToAddTransaction: (Long, Long) -> Unit,
     viewModel: AccountDetailViewModel = hiltViewModel()
 ) {
     val account by viewModel.account.collectAsState()
@@ -85,7 +87,7 @@ fun AccountDetailScreen(
             )
         },
         floatingActionButton = {
-            FloatingActionButton(onClick = { onNavigateToAddTransaction(accountId) }) {
+            FloatingActionButton(onClick = { onNavigateToAddTransaction(accountId, -1L) }) {
                 Icon(Icons.Default.Add, contentDescription = "Add Transaction")
             }
         }
@@ -109,7 +111,7 @@ fun AccountDetailScreen(
             
             FilterChips(selectedFilter, viewModel::onFilterChange)
 
-            TransactionListSection(transactions)
+            TransactionListSection(transactions, onTransactionClick = { onNavigateToAddTransaction(accountId, it.id) })
         }
     }
 }
@@ -167,7 +169,7 @@ fun SummarySection(
         ) {
             Text("Total Balance", color = Color.White.copy(alpha = 0.8f))
             Text(
-                "$currency ${String.format(Locale.US, "%.2f", balance)}",
+                "$currency ${formatCurrency(balance)}",
                 color = Color.White,
                 style = MaterialTheme.typography.headlineLarge,
                 fontWeight = FontWeight.Bold
@@ -191,7 +193,7 @@ fun SummaryItem(label: String, amount: Double, currency: String, color: Color) {
     Column(horizontalAlignment = Alignment.CenterHorizontally) {
         Text(label, color = color.copy(alpha = 0.8f), style = MaterialTheme.typography.bodySmall)
         Text(
-            "$currency ${String.format(Locale.US, "%.2f", amount)}",
+            "$currency ${formatCurrency(amount)}",
             color = color,
             fontWeight = FontWeight.Bold,
             style = MaterialTheme.typography.titleMedium
@@ -200,7 +202,7 @@ fun SummaryItem(label: String, amount: Double, currency: String, color: Color) {
 }
 
 @Composable
-fun TransactionListSection(transactions: List<Transaction>) {
+fun TransactionListSection(transactions: List<Transaction>, onTransactionClick: (Transaction) -> Unit) {
     val groupedTransactions = transactions.groupBy {
         val date = Date(it.date)
         val calendar = Calendar.getInstance()
@@ -231,16 +233,16 @@ fun TransactionListSection(transactions: List<Transaction>) {
                 )
             }
             items(items) { transaction ->
-                TransactionCard(transaction)
+                TransactionCard(transaction, onClick = { onTransactionClick(transaction) })
             }
         }
     }
 }
 
 @Composable
-fun TransactionCard(transaction: Transaction) {
+fun TransactionCard(transaction: Transaction, onClick: () -> Unit) {
     Card(
-        modifier = Modifier.fillMaxWidth(),
+        modifier = Modifier.fillMaxWidth().clickable { onClick() },
         colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant),
         shape = RoundedCornerShape(12.dp)
     ) {
@@ -250,39 +252,38 @@ fun TransactionCard(transaction: Transaction) {
                 .fillMaxWidth(),
             verticalAlignment = Alignment.CenterVertically
         ) {
+            val (icon, color) = getCategoryIconAndColor(transaction.category)
             Box(
                 modifier = Modifier
                     .size(40.dp)
                     .clip(CircleShape)
-                    .background(Color.White.copy(alpha = 0.5f)),
+                    .background(color),
                 contentAlignment = Alignment.Center
             ) {
-                Icon(Icons.Default.ShoppingCart, contentDescription = null, tint = Color.DarkGray)
+                Icon(icon, contentDescription = null, tint = Color.White, modifier = Modifier.size(20.dp))
             }
             
             Spacer(modifier = Modifier.width(16.dp))
             
             Column(modifier = Modifier.weight(1f)) {
-                Text(transaction.title, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.onSurface)
+                Text(transaction.category, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.onSurface)
                 if (transaction.notes.isNotEmpty()) {
                     Text(
                         transaction.notes,
                         style = MaterialTheme.typography.bodySmall,
                         color = Color.Gray,
-                        maxLines = 1
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis
                     )
                 }
             }
             
-            val (text, color) = if (transaction.type == TransactionType.INCOME) {
-                Pair("${transaction.currency} ${String.format(Locale.US, "%.2f", transaction.amount)}", IncomeGreen)
-            } else {
-                Pair("-${transaction.currency} ${String.format(Locale.US, "%.2f", transaction.amount)}", ExpenseRed)
-            }
+            val amountColor = if (transaction.type == TransactionType.INCOME) IncomeGreen else ExpenseRed
+            val prefix = if (transaction.type == TransactionType.INCOME) "+" else "-"
             
             Text(
-                text = text,
-                color = color,
+                text = "$prefix ${transaction.currency} ${formatCurrency(transaction.amount)}",
+                color = amountColor,
                 fontWeight = FontWeight.Bold
             )
         }
