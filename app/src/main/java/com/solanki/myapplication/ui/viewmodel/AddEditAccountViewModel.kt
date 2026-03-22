@@ -80,7 +80,11 @@ class AddEditAccountViewModel @Inject constructor(
                             _eventFlow.emit(UiEvent.ShowSnackbar("Account name can't be empty"))
                             return@launch
                         }
-                        val balance = _initialBalance.value.toDoubleOrNull() ?: 0.0
+                        
+                        // Robust parsing for different locales (e.g., handling comma as decimal separator)
+                        val balanceString = _initialBalance.value.replace(',', '.')
+                        val balance = balanceString.toDoubleOrNull() ?: 0.0
+
                         val account = Account(
                             id = currentAccountId ?: 0,
                             name = _accountName.value,

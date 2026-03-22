@@ -5,6 +5,7 @@ import com.solanki.myapplication.data.local.PocketLedgerDatabase
 import com.solanki.myapplication.data.model.Account
 import com.solanki.myapplication.data.model.CategorySum
 import com.solanki.myapplication.data.model.Transaction
+import com.solanki.myapplication.data.model.TransactionType
 import com.solanki.myapplication.data.model.Template
 import com.solanki.myapplication.domain.model.AccountWithBalance
 import com.solanki.myapplication.domain.repository.PocketLedgerRepository
@@ -121,20 +122,38 @@ class PocketLedgerRepositoryImpl @Inject constructor(
         since: Long,
         until: Long
     ): Flow<List<Pair<Long, Double>>> {
-        return dao.getAllTransactionsForAccounts(accountIds, 0, until).map { transactions ->
-            val sortedTrans = transactions.sortedBy { it.date }
-            val trend = mutableListOf<Pair<Long, Double>>()
-            var currentBalance = 0.0
+        return dao.getAllAccounts().combine(dao.getAllTransactions(0, until)) { accounts, allTransactions ->
+            val selectedAccounts = if (accountIds.isEmpty()) accounts else accounts.filter { it.id in accountIds }
+            val initialBalanceSum = selectedAccounts.sumOf { it.initialBalance }
             
-            sortedTrans.forEach { trans ->
-                if (trans.type == com.solanki.myapplication.data.model.TransactionType.EXPENSE) {
-                    currentBalance -= trans.amount
-                } else {
-                    currentBalance += trans.amount
+            val filteredTransactions = allTransactions.filter { it.accountId in selectedAccounts.map { acc -> acc.id } }
+            val sortedTrans = filteredTransactions.sortedBy { it.date }
+            
+            val trend = mutableListOf<Pair<Long, Double>>()
+            var currentBalance = initialBalanceSum
+            
+            // Calculate balance before 'since' if applicable
+            if (since > 0) {
+                val balanceBeforeSince = initialBalanceSum + sortedTrans.filter { it.date < since }.sumOf { 
+                    when (it.type) {
+                        TransactionType.EXPENSE -> -it.amount
+                        TransactionType.INCOME -> it.amount
+                        else -> 0.0 // Explicitly ignore other types if they shouldn't affect balance
+                    }
                 }
-                if (trans.date >= since) {
-                    trend.add(trans.date to currentBalance)
+                trend.add(since to balanceBeforeSince)
+                currentBalance = balanceBeforeSince
+            } else {
+                trend.add(0L to initialBalanceSum)
+            }
+
+            sortedTrans.filter { it.date >= since }.forEach { trans ->
+                currentBalance += when (trans.type) {
+                    TransactionType.EXPENSE -> -trans.amount
+                    TransactionType.INCOME -> trans.amount
+                    else -> 0.0
                 }
+                trend.add(trans.date to currentBalance)
             }
             trend
         }
@@ -149,9 +168,16 @@ class PocketLedgerRepositoryImpl @Inject constructor(
     override fun getAccountsWithBalanceFlow(): Flow<List<AccountWithBalance>> {
         return dao.getAllAccounts().combine(dao.getAllTransactions()) { accounts, transactions ->
             accounts.map { account ->
-                val balance = transactions.filter { it.accountId == account.id && !it.isArchived }
-                    .sumOf { if (it.type == com.solanki.myapplication.data.model.TransactionType.EXPENSE) -it.amount else it.amount }
-                AccountWithBalance(account, balance)
+                val balanceChange = transactions
+                    .filter { it.accountId == account.id && !it.isArchived }
+                    .sumOf { 
+                        when (it.type) {
+                            TransactionType.EXPENSE -> -it.amount
+                            TransactionType.INCOME -> it.amount
+                            else -> 0.0
+                        }
+                    }
+                AccountWithBalance(account, account.initialBalance + balanceChange)
             }
         }
     }
