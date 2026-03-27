@@ -287,48 +287,61 @@ fun AddEditTransactionScreen(
                     // Note/Description section
                     Column(modifier = Modifier.padding(horizontal = 24.dp, vertical = 16.dp)) {
                         Text("Note", color = Color.White.copy(alpha = 0.7f), fontSize = 14.sp, fontWeight = FontWeight.Bold)
-                        TextField(
-                            value = noteState,
-                            onValueChange = { viewModel.onNoteChange(it) },
-                            placeholder = { Text("Enter description here...", color = Color.White.copy(alpha = 0.5f)) },
-                            modifier = Modifier.fillMaxWidth(),
-                            colors = TextFieldDefaults.colors(
-                                focusedContainerColor = Color.Transparent,
-                                unfocusedContainerColor = Color.Transparent,
-                                focusedTextColor = Color.White,
-                                unfocusedTextColor = Color.White,
-                                focusedIndicatorColor = Color.White,
-                                unfocusedIndicatorColor = Color.White.copy(alpha = 0.5f)
-                            )
-                        )
                         
-                        // Suggestions List
-                        AnimatedVisibility(
-                            visible = suggestions.isNotEmpty(),
-                            enter = expandVertically(),
-                            exit = shrinkVertically()
-                        ) {
-                            Column(
+                        Box(modifier = Modifier.fillMaxWidth()) {
+                            // Container for suggestions that doesn't take space in layout but overlaps upwards
+                            Box(
                                 modifier = Modifier
                                     .fillMaxWidth()
-                                    .padding(top = 4.dp)
-                                    .background(Color.White.copy(alpha = 0.1f), RoundedCornerShape(8.dp))
+                                    .height(0.dp)
+                                    .wrapContentHeight(Alignment.Bottom, unbounded = true)
+                                    .zIndex(10f)
                             ) {
-                                suggestions.forEach { suggestion ->
-                                    Text(
-                                        text = suggestion,
+                                if (suggestions.isNotEmpty()) {
+                                    Surface(
                                         modifier = Modifier
                                             .fillMaxWidth()
-                                            .clickable { viewModel.onSuggestionClick(suggestion) }
-                                            .padding(12.dp),
-                                        color = Color.White,
-                                        fontSize = 14.sp
-                                    )
-                                    if (suggestion != suggestions.last()) {
-                                        HorizontalDivider(color = Color.White.copy(alpha = 0.1f), thickness = 0.5.dp)
+                                            .padding(bottom = 8.dp)
+                                            .heightIn(max = 200.dp),
+                                        shape = RoundedCornerShape(8.dp),
+                                        color = Color(0xFF1565C0),
+                                        shadowElevation = 8.dp,
+                                        tonalElevation = 8.dp
+                                    ) {
+                                        LazyColumn(modifier = Modifier.fillMaxWidth()) {
+                                            items(suggestions) { suggestion ->
+                                                Text(
+                                                    text = suggestion,
+                                                    modifier = Modifier
+                                                        .fillMaxWidth()
+                                                        .clickable { viewModel.onSuggestionClick(suggestion) }
+                                                        .padding(12.dp),
+                                                    color = Color.White,
+                                                    fontSize = 14.sp
+                                                )
+                                                if (suggestion != suggestions.last()) {
+                                                    HorizontalDivider(color = Color.White.copy(alpha = 0.1f), thickness = 0.5.dp)
+                                                }
+                                            }
+                                        }
                                     }
                                 }
                             }
+
+                            TextField(
+                                value = noteState,
+                                onValueChange = { viewModel.onNoteChange(it) },
+                                placeholder = { Text("Enter description here...", color = Color.White.copy(alpha = 0.5f)) },
+                                modifier = Modifier.fillMaxWidth(),
+                                colors = TextFieldDefaults.colors(
+                                    focusedContainerColor = Color.Transparent,
+                                    unfocusedContainerColor = Color.Transparent,
+                                    focusedTextColor = Color.White,
+                                    unfocusedTextColor = Color.White,
+                                    focusedIndicatorColor = Color.White,
+                                    unfocusedIndicatorColor = Color.White.copy(alpha = 0.5f)
+                                )
+                            )
                         }
                     }
                     

@@ -92,7 +92,7 @@ class AddEditTransactionViewModel @Inject constructor(
         // Collect historical notes reactively
         viewModelScope.launch {
             repository.getAllTransactionNotes().collect { notes ->
-                historicalNotes = notes
+                historicalNotes = notes.filter { it.isNotBlank() }.distinct()
                 updateSuggestions(_note.value)
             }
         }
@@ -177,8 +177,9 @@ class AddEditTransactionViewModel @Inject constructor(
     }
 
     private fun updateSuggestions(input: String) {
-        if (input.length >= 3) {
-            val lowerInput = input.lowercase()
+        val trimmedInput = input.trim()
+        if (trimmedInput.length >= 3) {
+            val lowerInput = trimmedInput.lowercase()
             _suggestions.value = historicalNotes.filter { note ->
                 val lowerNote = note.lowercase()
                 lowerNote.contains(lowerInput) && lowerNote != lowerInput
