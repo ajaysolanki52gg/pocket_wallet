@@ -249,6 +249,10 @@ class AnalyticsViewModel @Inject constructor(
         }
     }
 
+    fun selectSingleAccount(accountId: Long?) {
+        _selectedAccountIds.value = if (accountId == null) emptySet() else setOf(accountId)
+    }
+
     fun selectAllAccounts() {
         _selectedAccountIds.value = emptySet()
     }

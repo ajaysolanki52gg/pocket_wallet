@@ -2,6 +2,8 @@ package com.solanki.myapplication.ui.viewmodel
 
 import androidx.compose.runtime.State
 import androidx.compose.runtime.mutableStateOf
+import androidx.compose.ui.text.TextRange
+import androidx.compose.ui.text.input.TextFieldValue
 import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
@@ -47,8 +49,8 @@ class AddEditTransactionViewModel @Inject constructor(
     private val _category = mutableStateOf("Food")
     val category: State<String> = _category
 
-    private val _note = mutableStateOf("")
-    val note: State<String> = _note
+    private val _note = mutableStateOf(TextFieldValue(""))
+    val note: State<TextFieldValue> = _note
 
     private val _date = mutableStateOf(System.currentTimeMillis())
     val date: State<Long> = _date
@@ -80,7 +82,7 @@ class AddEditTransactionViewModel @Inject constructor(
                         _transactionType.value = trans.type
                         _selectedAccount.value = accounts.find { it.id == trans.accountId }
                         _category.value = trans.category
-                        _note.value = trans.notes
+                        _note.value = TextFieldValue(trans.notes)
                         _date.value = trans.date
                     }
                 } else if (_selectedAccount.value == null) {
@@ -93,7 +95,7 @@ class AddEditTransactionViewModel @Inject constructor(
         viewModelScope.launch {
             repository.getAllTransactionNotes().collect { notes ->
                 historicalNotes = notes.filter { it.isNotBlank() }.distinct()
-                updateSuggestions(_note.value)
+                updateSuggestions(_note.value.text)
             }
         }
 
@@ -109,7 +111,7 @@ class AddEditTransactionViewModel @Inject constructor(
         _transactionType.value = template.type
         template.amount?.let { _amountStr.value = it.toString() }
         template.category?.let { _category.value = it }
-        template.note?.let { _note.value = it }
+        template.note?.let { _note.value = TextFieldValue(it) }
         template.accountId?.let { id ->
             _allAccounts.value.find { it.id == id }?.let { _selectedAccount.value = it }
         }
@@ -122,7 +124,7 @@ class AddEditTransactionViewModel @Inject constructor(
                 type = _transactionType.value,
                 amount = _amountStr.value.toDoubleOrNull(),
                 category = _category.value,
-                note = _note.value,
+                note = _note.value.text,
                 accountId = _selectedAccount.value?.id
             )
             repository.insertTemplate(template)
@@ -171,9 +173,9 @@ class AddEditTransactionViewModel @Inject constructor(
         _category.value = category
     }
 
-    fun onNoteChange(note: String) {
+    fun onNoteChange(note: TextFieldValue) {
         _note.value = note
-        updateSuggestions(note)
+        updateSuggestions(note.text)
     }
 
     private fun updateSuggestions(input: String) {
@@ -192,7 +194,14 @@ class AddEditTransactionViewModel @Inject constructor(
     }
 
     fun onSuggestionClick(suggestion: String) {
-        _note.value = suggestion
+        _note.value = TextFieldValue(
+            text = suggestion,
+            selection = TextRange(suggestion.length)
+        )
+        _suggestions.value = emptyList()
+    }
+    
+    fun clearSuggestions() {
         _suggestions.value = emptyList()
     }
 
@@ -237,7 +246,7 @@ class AddEditTransactionViewModel @Inject constructor(
                         currency = currentAcc.currency,
                         category = "Transfer",
                         title = "Transfer",
-                        notes = _note.value,
+                        notes = _note.value.text,
                         date = _date.value,
                         time = System.currentTimeMillis()
                     )
@@ -250,7 +259,7 @@ class AddEditTransactionViewModel @Inject constructor(
                         currency = targetAcc.currency,
                         category = "Transfer",
                         title = "Transfer",
-                        notes = _note.value,
+                        notes = _note.value.text,
                         date = _date.value,
                         time = System.currentTimeMillis()
                     )
@@ -265,7 +274,7 @@ class AddEditTransactionViewModel @Inject constructor(
                         currency = currentAcc.currency,
                         category = _category.value,
                         title = _category.value,
-                        notes = _note.value,
+                        notes = _note.value.text,
                         date = _date.value,
                         time = System.currentTimeMillis()
                     )

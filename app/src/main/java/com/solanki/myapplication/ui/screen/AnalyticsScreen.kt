@@ -85,6 +85,7 @@ fun AnalyticsScreen(
     var showAccountSelector by remember { mutableStateOf(false) }
     var isSearching by remember { mutableStateOf(false) }
     var showMenu by remember { mutableStateOf(false) }
+    var showAccountDropdown by remember { mutableStateOf(false) }
 
     var selectedTransaction by remember { mutableStateOf<Transaction?>(null) }
     var showDeleteConfirm by remember { mutableStateOf(false) }
@@ -209,7 +210,53 @@ fun AnalyticsScreen(
                             )
                         } else {
                             TopAppBar(
-                                title = { Text("Statistics", fontWeight = FontWeight.Bold) },
+                                title = {
+                                    val selectedAccountName = when {
+                                        selectedAccountIds.isEmpty() -> "All Accounts"
+                                        selectedAccountIds.size == 1 -> allAccounts.find { it.id == selectedAccountIds.first() }?.name ?: "Statistics"
+                                        else -> "${selectedAccountIds.size} Accounts"
+                                    }
+                                    
+                                    Box {
+                                        Row(
+                                            verticalAlignment = Alignment.CenterVertically,
+                                            modifier = Modifier.clickable { showAccountDropdown = true }
+                                        ) {
+                                            Text(selectedAccountName, fontWeight = FontWeight.Bold)
+                                            Icon(Icons.Default.ArrowDropDown, contentDescription = null)
+                                        }
+                                        
+                                        DropdownMenu(
+                                            expanded = showAccountDropdown,
+                                            onDismissRequest = { showAccountDropdown = false }
+                                        ) {
+                                            DropdownMenuItem(
+                                                text = { Text("All Accounts") },
+                                                onClick = {
+                                                    viewModel.selectSingleAccount(null)
+                                                    showAccountDropdown = false
+                                                },
+                                                leadingIcon = {
+                                                    if (selectedAccountIds.isEmpty()) Icon(Icons.Default.Check, contentDescription = null)
+                                                }
+                                            )
+                                            allAccounts.forEach { account ->
+                                                DropdownMenuItem(
+                                                    text = { Text(account.name) },
+                                                    onClick = {
+                                                        viewModel.selectSingleAccount(account.id)
+                                                        showAccountDropdown = false
+                                                    },
+                                                    leadingIcon = {
+                                                        if (selectedAccountIds.size == 1 && selectedAccountIds.contains(account.id)) {
+                                                            Icon(Icons.Default.Check, contentDescription = null)
+                                                        }
+                                                    }
+                                                )
+                                            }
+                                        }
+                                    }
+                                },
                                 navigationIcon = {
                                     IconButton(onClick = onNavigateBack) {
                                         Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")

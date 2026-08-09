@@ -1,5 +1,6 @@
 package com.solanki.myapplication.ui.screen
 
+import androidx.activity.compose.BackHandler
 import androidx.compose.animation.core.animateDpAsState
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -59,11 +60,6 @@ fun AddEditTransactionScreen(
     val templates by viewModel.templates
     
     val snackbarHostState = remember { SnackbarHostState() }
-    val datePickerState = rememberDatePickerState(initialSelectedDateMillis = dateState)
-    val timePickerState = rememberTimePickerState(
-        initialHour = Calendar.getInstance().apply { timeInMillis = dateState }.get(Calendar.HOUR_OF_DAY),
-        initialMinute = Calendar.getInstance().apply { timeInMillis = dateState }.get(Calendar.MINUTE)
-    )
     
     var showDatePicker by remember { mutableStateOf(false) }
     var showTimePicker by remember { mutableStateOf(false) }
@@ -84,7 +80,14 @@ fun AddEditTransactionScreen(
         }
     }
 
+    if (suggestions.isNotEmpty()) {
+        BackHandler {
+            viewModel.clearSuggestions()
+        }
+    }
+
     if (showDatePicker) {
+        val datePickerState = rememberDatePickerState(initialSelectedDateMillis = dateState)
         DatePickerDialog(
             onDismissRequest = { showDatePicker = false },
             confirmButton = {
@@ -105,6 +108,10 @@ fun AddEditTransactionScreen(
     }
 
     if (showTimePicker) {
+        val timePickerState = rememberTimePickerState(
+            initialHour = Calendar.getInstance().apply { timeInMillis = dateState }.get(Calendar.HOUR_OF_DAY),
+            initialMinute = Calendar.getInstance().apply { timeInMillis = dateState }.get(Calendar.MINUTE)
+        )
         TimePickerDialog(
             onDismissRequest = { showTimePicker = false },
             confirmButton = {
@@ -305,19 +312,37 @@ fun AddEditTransactionScreen(
                                         shadowElevation = 8.dp,
                                         tonalElevation = 8.dp
                                     ) {
-                                        LazyColumn(modifier = Modifier.fillMaxWidth()) {
-                                            items(suggestions) { suggestion ->
-                                                Text(
-                                                    text = suggestion,
-                                                    modifier = Modifier
-                                                        .fillMaxWidth()
-                                                        .clickable { viewModel.onSuggestionClick(suggestion) }
-                                                        .padding(12.dp),
-                                                    color = Color.White,
-                                                    fontSize = 14.sp
-                                                )
-                                                if (suggestion != suggestions.last()) {
-                                                    HorizontalDivider(color = Color.White.copy(alpha = 0.1f), thickness = 0.5.dp)
+                                        Column {
+                                            Row(
+                                                modifier = Modifier.fillMaxWidth().padding(horizontal = 8.dp),
+                                                horizontalArrangement = Arrangement.End
+                                            ) {
+                                                IconButton(
+                                                    onClick = { viewModel.clearSuggestions() },
+                                                    modifier = Modifier.size(32.dp)
+                                                ) {
+                                                    Icon(
+                                                        Icons.Default.Close,
+                                                        contentDescription = "Close suggestions",
+                                                        tint = Color.White.copy(alpha = 0.7f),
+                                                        modifier = Modifier.size(16.dp)
+                                                    )
+                                                }
+                                            }
+                                            LazyColumn(modifier = Modifier.fillMaxWidth()) {
+                                                items(suggestions) { suggestion ->
+                                                    Text(
+                                                        text = suggestion,
+                                                        modifier = Modifier
+                                                            .fillMaxWidth()
+                                                            .clickable { viewModel.onSuggestionClick(suggestion) }
+                                                            .padding(12.dp),
+                                                        color = Color.White,
+                                                        fontSize = 14.sp
+                                                    )
+                                                    if (suggestion != suggestions.last()) {
+                                                        HorizontalDivider(color = Color.White.copy(alpha = 0.1f), thickness = 0.5.dp)
+                                                    }
                                                 }
                                             }
                                         }

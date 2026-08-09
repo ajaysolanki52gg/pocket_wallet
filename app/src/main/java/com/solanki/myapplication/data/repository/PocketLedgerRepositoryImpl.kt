@@ -162,7 +162,11 @@ class PocketLedgerRepositoryImpl @Inject constructor(
         accountIds: List<Long>,
         since: Long,
         until: Long
-    ): Flow<List<CategorySum>> = dao.getSpendingByCategoryForAccounts(accountIds, since, until)
+    ): Flow<List<CategorySum>> = if (accountIds.isEmpty()) {
+        dao.getSpendingByCategory(since, until)
+    } else {
+        dao.getSpendingByCategoryForAccounts(accountIds, since, until)
+    }
 
     override fun getAccountsWithBalanceFlow(): Flow<List<AccountWithBalance>> {
         return dao.getAllAccounts().combine(dao.getAllTransactions()) { accounts, transactions ->
@@ -182,6 +186,8 @@ class PocketLedgerRepositoryImpl @Inject constructor(
     }
 
     override suspend fun checkpointDatabase() {
+        val db = database.openHelper.writableDatabase
+        db.query("PRAGMA wal_checkpoint(FULL)").close()
     }
 
     override suspend fun closeDatabase() {
